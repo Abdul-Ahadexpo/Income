@@ -114,7 +114,7 @@ function fetchIncomeDetails(userId) {
     if (snapshot.exists()) {
       const user = snapshot.val();
       const income = user.income; // Access the income field
-      incomeList.innerHTML = `<li>Income: ${income}</li>`; // Display the income
+      incomeList.innerHTML = `<li>This months Income: ${income} Taka</li>`; // Display the income
     } else {
       incomeList.innerHTML = "<li>No income details found.</li>";
     }
