@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Withdraw Amount</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/5fc4420cfa.js" crossorigin="anonymous"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+
+</head>
+
+<body class="bg-gradient-to-r from-blue-100 to-indigo-200 min-h-screen flex items-center justify-center">
+  <div class="container mx-auto p-4 max-w-lg">
+    <h1 class="text-4xl font-bold text-center mb-8 text-indigo-700 drop-shadow-lg">Withdraw Amount</h1>
+
+    <div class="bg-white p-6 rounded-lg shadow-lg">
+      <label for="withdraw-amount" class="block text-lg font-semibold">Enter Withdrawal Amount:</label>
+      <input id="withdraw-amount" type="number" class="input input-bordered w-full mb-4"
+        placeholder="Enter amount to withdraw" />
+      <button id="submit-withdraw" class="btn btn-primary w-full mt-4">
+        Submit Withdrawal
+      </button>
+      <ul id="income-list" class="mt-4"></ul> <!-- Display Income Information -->
+    </div>
+  </div>
+
+  <script>
+    // Fetch income from localStorage
+    function fetchIncomeDetails() {
+      const income = localStorage.getItem('income'); // Get income from localStorage
+      if (income) {
+        document.getElementById("income-list").innerHTML = `<li>This month's Income: ${income} Taka</li>`;
+
+        // Handle the withdrawal logic
+        const submitWithdrawBtn = document.getElementById("submit-withdraw");
+        const withdrawAmountInput = document.getElementById("withdraw-amount");
+
+        submitWithdrawBtn.addEventListener("click", () => {
+          const withdrawAmount = parseInt(withdrawAmountInput.value);
+
+          // Ensure withdrawal is at least 200 less than income
+          if (withdrawAmount >= income || withdrawAmount < (income - 200)) {
+            alert("Invalid withdrawal amount! Must be at least 200 less than your income.");
+            return;
+          }
+
+          // Handle the rest of the withdrawal process (API submission, etc.)
+          alert("Withdrawal request submitted.");
+
+          // Optionally, update the localStorage with the new income
+          const newIncome = income - withdrawAmount;
+          localStorage.setItem('income', newIncome); // Update income in localStorage
+          document.getElementById("income-list").innerHTML = `<li>This month's Income: ${newIncome} Taka</li>`; // Update UI
+        });
+      } else {
+        document.getElementById("income-list").innerHTML = "<li>No income details found.</li>";
+      }
+    }
+
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDSWMPmzwyRoJf6ymBA56sqEu0hZRPXAFA",
+      authDomain: "dorochat-830bb.firebaseapp.com",
+      databaseURL: "https://dorochat-830bb-default-rtdb.firebaseio.com",
+      projectId: "dorochat-830bb",
+      storageBucket: "dorochat-830bb.firebasestorage.app",
+      messagingSenderId: "390410096076",
+      appId: "1:390410096076:web:ef0cb4978c93b6be96a169",
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Fetch income details of the current user from Firebase and store it in localStorage
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        const dbRef = firebase.database().ref(`users/${user.uid}`);
+        dbRef.once("value", (snapshot) => {
+          if (snapshot.exists()) {
+            const user = snapshot.val();
+            const income = user.income;
+
+            // Save income to localStorage
+            if (income) {
+              localStorage.setItem('income', income);
+              fetchIncomeDetails();
+            }
+          }
+        });
+      } else {
+        alert("User not logged in.");
+      }
+    });
+  </script>
+</body>
+
+</html>
