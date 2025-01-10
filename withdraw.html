@@ -8,120 +8,125 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://kit.fontawesome.com/5fc4420cfa.js" crossorigin="anonymous"></script>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-auth.js"></script>
-
-  <script src="config.js"></script>
-  <script src="app.js"></script>
-
 </head>
 
 <body class="bg-gradient-to-r from-blue-100 to-indigo-200 min-h-screen flex items-center justify-center">
-  <div class="container mx-auto p-4 max-w-lg">
-    <h1 class="text-4xl font-bold text-center mb-8 text-indigo-700 drop-shadow-lg">Withdraw Amount</h1>
 
-    <div class="bg-white p-6 rounded-lg shadow-lg">
-      <label for="withdraw-amount" class="block text-lg font-semibold">Enter Withdrawal Amount:</label>
-      <input id="withdraw-amount" type="number" class="input input-bordered w-full mb-4"
-        placeholder="Enter amount to withdraw" />
-      <button id="submit-withdraw" class="btn btn-primary w-full mt-4">
-        Submit Withdrawal
-      </button>
-      <ul id="income-list" class="mt-4"></ul> <!-- Display Income Information -->
+  <div class="container mx-auto p-4 max-w-lg">
+    <h1 class="text-4xl font-bold text-center mb-8 text-indigo-700 drop-shadow-lg animate-pulse">
+      Withdraw Income
+    </h1>
+
+    <div
+      class="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg shadow-xl transition-transform transform hover:scale-105 duration-500">
+
+      <form id="withdraw-form" action="https://api.web3forms.com/submit" method="post">
+
+        <!-- Replace with your Access Key -->
+        <input type="hidden" name="access_key" value="78bafe1f-05fd-4f4a-bd3b-c12ec189a7e7">
+
+        <!-- Name Input -->
+        <label for="name" class="block text-lg font-semibold text-gray-200 mb-2">Name:</label>
+        <input id="name" type="text"
+          class="input input-bordered w-full mb-4 bg-gray-700 text-white placeholder-gray-400 focus:ring-4 focus:ring-indigo-500 transition-all duration-300"
+          placeholder="Enter your name" name="name" required />
+
+        <!-- Withdrawal Method -->
+        <div class="mb-4">
+          <label class="block text-lg font-semibold text-gray-200 mb-2">Select Withdrawal Method:</label>
+          <div class="flex gap-4">
+            <label class="cursor-pointer flex items-center hover:scale-110 transition-transform duration-300">
+              <input type="radio" name="withdraw-method" value="bkash" class="radio bg-gray-600 border-gray-400"
+                id="bkash-radio" required="01" />
+              <span class="ml-2 text-white">Bkash</span>
+            </label>
+            <label class="cursor-pointer flex items-center hover:scale-110 transition-transform duration-300">
+              <input type="radio" name="withdraw-method" value="cash" class="radio bg-gray-600 border-gray-400"
+                id="cash-radio" />
+              <span class="ml-2 text-white">Cash</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Bkash Number Section -->
+        <div id="bkash-section" class="hidden">
+          <label for="bkash" class="block text-lg font-semibold text-gray-200 mb-2">Bkash Number:</label>
+          <input id="bkash" type="number"
+            class="input input-bordered w-full mb-4 bg-gray-700 text-white placeholder-gray-400 focus:ring-4 focus:ring-indigo-500 transition-all duration-300"
+            placeholder="Enter your Bkash number" name="bkash" />
+        </div>
+
+        <!-- Withdrawal Amount -->
+        <label for="withdraw-amount" class="block text-lg font-semibold text-gray-200 mb-2">Enter Withdrawal
+          Amount:</label>
+        <input id="withdraw-amount" type="number"
+          class="input input-bordered w-full mb-4 bg-gray-700 text-white placeholder-gray-400 focus:ring-4 focus:ring-indigo-500 transition-all duration-300"
+          placeholder="Enter amount to withdraw" name="withdraw-amount" />
+
+        <!-- Submit Button -->
+        <button id="submit-withdraw"
+          class="btn w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:shadow-indigo-500/50 transition-all duration-500 transform hover:-translate-y-1">
+          Submit Withdrawal
+        </button>
+        <ul id="income-list" class="mt-4 text-white"></ul>
+      </form>
     </div>
+
   </div>
 
   <script>
-    // Fetch and display the income details
-    function fetchIncomeDetails(userId) {
-      const dbRef = firebase.database().ref(`users/${userId}`);
-      dbRef.once("value", (snapshot) => {
-        if (snapshot.exists()) {
-          const user = snapshot.val();
-          const income = user.income; // Access the income field
+    // Initialize income in local storage if not set
+    const initialIncome = 0; // Example value
+    if (!localStorage.getItem('income')) {
+      localStorage.setItem('income', initialIncome);
+    }
 
-          // Display income
-          document.getElementById("income-list").innerHTML = `<li>This month's Income: ${income} Taka</li>`;
+    // Show or hide the Bkash number input based on the selected method
+    document.getElementById('bkash-radio').addEventListener('change', () => {
+      document.getElementById('bkash-section').classList.remove('hidden');
+    });
 
-          // Handle the withdrawal logic
-          const submitWithdrawBtn = document.getElementById("submit-withdraw");
-          const withdrawAmountInput = document.getElementById("withdraw-amount");
+    document.getElementById('cash-radio').addEventListener('change', () => {
+      document.getElementById('bkash-section').classList.add('hidden');
+    });
 
-          submitWithdrawBtn.addEventListener("click", async () => {
-            const withdrawAmount = parseInt(withdrawAmountInput.value);
+    // Fetch and display income details
+    function fetchIncomeDetails() {
+      const income = parseInt(localStorage.getItem('income'), 10);
+      document.getElementById("income-list").innerHTML = `<li>This month's Income: ${income} Taka</li>`;
 
-            // Check if withdrawal is valid
-            if (withdrawAmount >= income || withdrawAmount < (income - 200)) {
-              alert("Invalid withdrawal amount! Must be at least 200 less than your income.");
-              return;
-            }
+      // Handle withdrawal logic
+      const submitWithdrawBtn = document.getElementById("submit-withdraw");
+      const withdrawAmountInput = document.getElementById("withdraw-amount");
 
-            // Prepare email data to send via API
-            const formData = {
-              access_key: "78bafe1f-05fd-4f4a-bd3b-c12ec189a7e7",
-              name: user.name,
-              email: user.email,
-              phone: user.phone,
-              address: user.address,
-              msgs: `Withdraw Amount: ${withdrawAmount}`
-            };
+      submitWithdrawBtn.addEventListener("click", (event) => {
+        event.preventDefault(); // Prevent form submission
 
-            try {
-              const response = await fetch("https://api.web3forms.com/submit", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-              });
+        const withdrawAmount = parseInt(withdrawAmountInput.value, 10);
 
-              if (response.ok) {
-                alert("Withdraw request submitted. We will process it soon.");
-
-                // Subtract the amount from income in Firebase
-                const newIncome = income - withdrawAmount;
-                dbRef.update({ income: newIncome }); // Update the income in Firebase
-              } else {
-                alert("There was an error submitting your withdraw request.");
-              }
-            } catch (error) {
-              console.error("Error sending email:", error);
-              alert("There was an error submitting your request.");
-            }
-          });
-        } else {
-          document.getElementById("income-list").innerHTML = "<li>No income details found.</li>";
+        if (isNaN(withdrawAmount)) {
+          alert("Please enter a valid amount.");
+          return;
         }
+
+        if (withdrawAmount > (income - 200) || withdrawAmount <= 0) {
+          alert(`Invalid withdrawal amount! You can only withdraw a maximum of ${income - 200} Taka.`);
+          return;
+        }
+
+        const newIncome = income - withdrawAmount;
+        localStorage.setItem('income', newIncome);
+
+        alert("Withdraw request submitted. We will process it soon.");
+        fetchIncomeDetails(); // Update displayed income
+
+        // Submit the form to send the email
+        document.getElementById("withdraw-form").submit();
       });
     }
 
-    // Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyDSWMPmzwyRoJf6ymBA56sqEu0hZRPXAFA",
-      authDomain: "dorochat-830bb.firebaseapp.com",
-      databaseURL: "https://dorochat-830bb-default-rtdb.firebaseio.com",
-      projectId: "dorochat-830bb",
-      storageBucket: "dorochat-830bb.firebasestorage.app",
-      messagingSenderId: "390410096076",
-      appId: "1:390410096076:web:ef0cb4978c93b6be96a169",
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-
-    // Fetch income details of the current user
-    firebase.auth().onAuthStateChanged(user => {
-      if (user) {
-        fetchIncomeDetails(user.uid);
-      } else {
-        alert("User not logged in.");
-      }
-    });
-    incomeDetailsInput.value = ""; // Clear input after success
-
+    // Load income details on page load
+    fetchIncomeDetails();
   </script>
 </body>
 
