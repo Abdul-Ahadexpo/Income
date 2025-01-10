@@ -131,6 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
     userName.textContent = user.displayName;
     userEmail.textContent = user.email;
     document.getElementById("profile-pic").src = user.photoURL;
+    fetchIncomeDetails(user.uid);
   }
 
   // Fetch and display the income details
@@ -141,7 +142,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const user = snapshot.val();
         const income = user.income; // Access the income field
         if (income) {
-          incomeList.innerHTML = `<li>This month's Income: ${income} Taka</li>`; // Display the income
+          incomeList.innerHTML = `<li>This month's Income: ${income} Taka</li>`;
+          // Display the income
         } else {
           incomeList.innerHTML = "<li>No income details found.</li>";
         }

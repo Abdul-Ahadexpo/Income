@@ -35,36 +35,67 @@
   </div>
 
   <script>
-    // Fetch income from localStorage
-    function fetchIncomeDetails() {
-      const income = localStorage.getItem('income'); // Get income from localStorage
-      if (income) {
-        document.getElementById("income-list").innerHTML = `<li>This month's Income: ${income} Taka</li>`;
+    // Fetch and display the income details
+    function fetchIncomeDetails(userId) {
+      const dbRef = firebase.database().ref(`users/${userId}`);
+      dbRef.once("value", (snapshot) => {
+        if (snapshot.exists()) {
+          const user = snapshot.val();
+          const income = user.income; // Access the income field
 
-        // Handle the withdrawal logic
-        const submitWithdrawBtn = document.getElementById("submit-withdraw");
-        const withdrawAmountInput = document.getElementById("withdraw-amount");
+          // Display income
+          document.getElementById("income-list").innerHTML = `<li>This month's Income: ${income} Taka</li>`;
 
-        submitWithdrawBtn.addEventListener("click", () => {
-          const withdrawAmount = parseInt(withdrawAmountInput.value);
+          // Handle the withdrawal logic
+          const submitWithdrawBtn = document.getElementById("submit-withdraw");
+          const withdrawAmountInput = document.getElementById("withdraw-amount");
 
-          // Ensure withdrawal is at least 200 less than income
-          if (withdrawAmount >= income || withdrawAmount < (income - 200)) {
-            alert("Invalid withdrawal amount! Must be at least 200 less than your income.");
-            return;
-          }
+          submitWithdrawBtn.addEventListener("click", async () => {
+            const withdrawAmount = parseInt(withdrawAmountInput.value);
 
-          // Handle the rest of the withdrawal process (API submission, etc.)
-          alert("Withdrawal request submitted.");
+            // Check if withdrawal is valid
+            if (withdrawAmount >= income || withdrawAmount < (income - 200)) {
+              alert("Invalid withdrawal amount! Must be at least 200 less than your income.");
+              return;
+            }
 
-          // Optionally, update the localStorage with the new income
-          const newIncome = income - withdrawAmount;
-          localStorage.setItem('income', newIncome); // Update income in localStorage
-          document.getElementById("income-list").innerHTML = `<li>This month's Income: ${newIncome} Taka</li>`; // Update UI
-        });
-      } else {
-        document.getElementById("income-list").innerHTML = "<li>No income details found.</li>";
-      }
+            // Prepare email data to send via API
+            const formData = {
+              access_key: "78bafe1f-05fd-4f4a-bd3b-c12ec189a7e7",
+              name: user.name,
+              email: user.email,
+              phone: user.phone,
+              address: user.address,
+              msgs: `Withdraw Amount: ${withdrawAmount}`
+            };
+
+            try {
+              const response = await fetch("https://api.web3forms.com/submit", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
+              });
+
+              if (response.ok) {
+                alert("Withdraw request submitted. We will process it soon.");
+
+                // Subtract the amount from income in Firebase
+                const newIncome = income - withdrawAmount;
+                dbRef.update({ income: newIncome }); // Update the income in Firebase
+              } else {
+                alert("There was an error submitting your withdraw request.");
+              }
+            } catch (error) {
+              console.error("Error sending email:", error);
+              alert("There was an error submitting your request.");
+            }
+          });
+        } else {
+          document.getElementById("income-list").innerHTML = "<li>No income details found.</li>";
+        }
+      });
     }
 
     // Firebase configuration
@@ -81,26 +112,16 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
 
-    // Fetch income details of the current user from Firebase and store it in localStorage
+    // Fetch income details of the current user
     firebase.auth().onAuthStateChanged(user => {
       if (user) {
-        const dbRef = firebase.database().ref(`users/${user.uid}`);
-        dbRef.once("value", (snapshot) => {
-          if (snapshot.exists()) {
-            const user = snapshot.val();
-            const income = user.income;
-
-            // Save income to localStorage
-            if (income) {
-              localStorage.setItem('income', income);
-              fetchIncomeDetails();
-            }
-          }
-        });
+        fetchIncomeDetails(user.uid);
       } else {
         alert("User not logged in.");
       }
     });
+    incomeDetailsInput.value = ""; // Clear input after success
+
   </script>
 </body>
 
